@@ -11,3 +11,7 @@ Till I reach that stage, this readMe is a readME only for ME :)
 5. Set up a connection to MongoDB and validate that you can connect to the same
 6. Set up a basic route without any schema and make sure your first get request returns a hardcoded message
 7. Commit
+
+8. Go ahead and create the schema.
+9. Create schema's in separate files One file each for Unit, Company, Employee A Unit will have a Company(only One) and a Company can have multiple Employees
+10. 

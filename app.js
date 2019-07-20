@@ -20,19 +20,23 @@ else
     console.log('Unable to connect to database');
 }
 
+app.use(require('body-parser').json());
 // In case of error, set up the error handler to console log the message to the developer
 // and send a user friendly error back as json response to the user.
+
+// TODO: Why is the error being returned as an HTML instead of JSON ? How do we fix it. Ask in the discussion forum.
 app.use((err, req, res, next) =>{
     if (NODE_ENV === "development")
     {
         console.error(err);
     }
     const { message, status } = err;
-    res.status(status).json({status, message})
+    response = JSON.stringify(message)
+    res.status(status).json({status, response})
 })
 
 // Set up the starter routes
-app.use(require('body-parser').json());
+
 app.use('/api/units', require('./api/routes/units'))
 
 // Set up a listener to listen on the specified PORT
