@@ -7,6 +7,8 @@ function isEmailValid(email)
     return /\S+@\S+\.\S+/.test(email)
 }
 
+var emailValidator = [isEmailValid, 'Please pass in a valid email']
+
 // Define the Schema for an Employee
 var schema =new Schema({
     first_name : {
@@ -26,7 +28,7 @@ var schema =new Schema({
     },
     email : {
         type : String,
-        validate : isEmailValid        
+        validate : emailValidator        
     }
 },
 {
