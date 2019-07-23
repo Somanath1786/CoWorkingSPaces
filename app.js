@@ -39,6 +39,7 @@ app.use((err, req, res, next) =>{
 
 app.use('/api/v1/units', require('./api/routes/units'))
 app.use('/api/v1/companies', require('./api/routes/companies'))
+app.use('/api/v1/employees', require('./api/routes/employees'))
 
 // Set up a listener to listen on the specified PORT
 const listener = () => console.log('Listening on port ' + PORT);
