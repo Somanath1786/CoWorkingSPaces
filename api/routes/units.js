@@ -2,29 +2,6 @@ const router = require('express').Router();
 const { generate : generateId } = require('shortid');
 const Units = require('../models/Unit')
 
-const filterUnits= async function(queryParams)
-{
-  var response;
-    // At this point of time, we know that there is only one query param
-    key = Object.keys(queryParams)[0];   
-    value = queryParams[key];
-    
-    if (key === 'kind')
-    {
-      respone = Units.find({kind : value})
-    }
-    else if (key === 'floor')
-    {
-      respone = Units.find({floor : value})
-    }
-    else
-    {
-      respone = "yet to be implemented"
-    }
-
-    return response;
-}
-
 // This route is not mentioned as one of the routes to the API.
 // However this is the api that I will be using to post the data to the database
 router.post('/', async (req, res, next) => {
@@ -45,7 +22,7 @@ router.post('/', async (req, res, next) => {
  * This API provides the solution for the first four API calls
  * All of these is a version of GET.
  * The first one is the most basic version while the next three depends on returning specific values based on query params
- * Call 1 : GET /api/v1/units
+ * Route 1 : GET /api/v1/units
 e.g. GET http://localhost:5000/api/v1/units
 Return a list of all of the units with all related information.
 
@@ -58,16 +35,22 @@ Sample return value :
 ]
 }
 
-Call 2 : GET /api/v1/units?kind=[kind]
+Route 2 : GET /api/v1/units?kind=[kind]
 e.g. GET http://localhost:5000/api/v1/units?kind=desk
 Return a list of all units where the kind is equal to the provided kind. If none are found, return an empty array.
+
+Route 3 :GET /api/v1/units?floor=[integer]
+e.g. GET http://localhost:5000/api/v1/units?floor=2
+Return a list of all units that are on the provided floor. If none are found, return an empty array.
+
+Route 4 :GET /api/v1/units?occupied=[true/false]
+e.g. GET http://localhost:5000/api/v1/units?occupied=true
+If true, return a list of all units that have a company associated with them. If false, return a list of all units that have no company associated with them. If none are found in either case, return an empty array.
  */
 router.get('/', async (req, res, next) =>{
     var status = 200;
     var response;
     const queryParams = req.query;
-    // TODO: Remove the console log
-    console.log(queryParams);
     // If no query params are present then return all the documents
     // queryParams is of type Object, hence a null check wont be sufficient
     if (Object.entries(queryParams).length === 0 && queryParams.constructor === Object)
@@ -86,13 +69,17 @@ router.get('/', async (req, res, next) =>{
         {
           response = await Units.find({kind : value}, {__v : false});   
         }
-        if (key == 'floor')
+        else if (key == 'floor')
         {
           response = await Units.find({floor : value}, {__v : false});
         }
-        if (key == 'occupied')
+        else if (key == 'occupied')
         {
           response = await Units.find({company : {$exists : value}}, {__v : false})
+        }
+        else
+        {
+          response = "Unfortunately, this query is not yet supported. Please try filtering by kind / floor / occupied"
         }
       }
       else
@@ -104,5 +91,202 @@ router.get('/', async (req, res, next) =>{
 
     res.json({status, response});
 })
+
+
+/**
+ *Route 4: PATCH /api/v1/units/[id]
+e.g. PATCH http://localhost:5000/api/v1/units/5
+Update the unit with whatever information is specified in the request body and return the newly updated document.
+If the ID provided does not match a unit, return a 404 and an appropriate message. Note: You should allow for the company to be added from this route, if provided.
+ */
+
+router.patch('/:id', async (req, res, next) => {
+  var status = 200;
+  var unit = await Units.findById(req.params.id) 
+
+  if (unit == null)
+  {
+    status = 404;
+    resonse = 'The requested unit is not found';
+
+    res.json({status, response});
+  }
+  else
+  {
+    // Go through the body of the patch request and see which fields needs to be updated and update the corresponding fields
+    if (req.body.kind)
+    {
+      unit.kind = req.body.kind;
+    }
+    if (req.body.floor)
+    {
+      unit.kind = req.body.floor
+    }
+    if (req.body.special_monthly_offer)
+    {
+      unit.special_monthly_offer = req.body.special_monthly_offer
+    }
+    if (req.body.company)
+    {
+      unit.company = req.body.company
+    }
+    unit = await unit.save();
+  } 
+
+  res.json({status, unit})
+ })
+
+
+/**
+ * PATCH /api/v1/units/[id]/company
+e.g. PATCH http://localhost:5000/api/v1/units/5/company
+Update the company associated with the given unit and return the newly updated document.
+This can also be used to change a unit's listing from being empty to being occupied. If the ID provided does not match a unit, return a 404 and an appropriate message.
+ */
+
+ router.patch('/:id/company', async (req, res, next) => {
+   var status = 200;
+   var unit = await Units.findById(req.params.id);
+   
+  if (unit == null)
+  {
+    status = 404;
+    resonse = 'The requested unit is not found';
+
+    res.json({status, response});
+  }
+  else
+  {
+    // Go through the body of the patch request and see which fields needs to be updated and update the corresponding fields
+    if (req.body.name)
+    {
+      unit.company.name = req.body.name;
+    }
+    if (req.body.contact_email)
+    {
+      unit.company.contact_email = req.body.contact_email
+    }
+    if (req.body.employees)
+    {
+      unit.company.employees = req.body.employees;
+    }
+
+    unit = await unit.save();
+  }
+
+  res.json({status, unit})
+ });
+ 
+ /**
+  * DELETE /api/v1/units/[id]/company
+e.g. DELETE http://localhost:5000/api/v1/units/5/company
+Remove the company from the given unit. If the ID provided does not match a unit, return a 404 and an appropriate message.
+  */
+router.delete('/:id/company', async(req, res, next) => {
+  var status = 200;
+  try {
+    const response = await Units.updateOne({ _id : req.params.id}, {$unset: {company:""} }, {new : true})
+    res.json({status, response});
+  }
+  catch(error) {
+    console.error(error);
+    const err = new Error(error.name + ' : ' + error.message);
+    err.status = 404;
+    next(err);
+  }  
+})
+
+/**
+ * GET /api/v1/units/[id]/company/employees
+e.g. GET http://localhost:5000/api/v1/units/5/company/employees
+Return all employees for the given company. If no company is listed, return a 404 and an appropriate message.
+If the ID provided does not match a unit, return a 404 and a different appropriate message.
+ */
+router.get('/:id/company/employees', async(req, res, next) => {
+  var status;
+  var unit = await Units.findById(req.params.id);
+  
+  if (unit == null)
+  {
+    status = 404
+    response = 'The requested unit cannot be found'    
+  }
+  else
+  {
+    if (unit.company == null)
+    {
+      status = 404;
+      response = 'There is no company listed for this unit'      
+    }
+    else
+    {
+      status = 200
+      response = unit.company.employees;      
+    }
+  }
+
+  res.json({status, response});
+})
+
+/**
+ * GET /api/v1/units/[id]/company/employees/[id]
+e.g. GET http://localhost:5000/api/v1/units/5/company/employees/12
+Return the specific employee for the given company. 
+If no company is listed, return a 404 and an appropriate message.
+If the unit ID provided does not match a unit, return a 404 and a different appropriate message.
+If no employee with that ID exists, return a different appropriate message.
+ */
+router.get('/:unitId/company/employees/:employeeId', async (req, res, next) => {
+  var status;
+  var unit = await Units.findById(req.params.unitId);
+  
+  if (unit == null)
+  {
+    status = 404
+    response = 'The requested unit cannot be found'    
+  }
+  else
+  {
+    if (unit.company == null)
+    {
+      status = 404;
+      response = 'There is no company listed for this unit'      
+    }
+    else
+    {
+      var employee;
+      for(var i = 0; i < unit.company.employees.length; i++)
+      {
+        if (unit.company.employees[i]._id.toString() === req.params.employeeId)
+        {
+          employee = unit.company.employees[i];
+          break;
+        }
+      }
+      
+      if (employee == undefined)
+      {
+        status = 404;
+        response = 'There is no employee with the requested id'
+      }
+      else
+      {
+        status = 200;
+        response = employee;
+      }
+    }
+  }
+
+  res.json({status, response});
+})
+
+/**
+ * POST /api/v1/units/[id]/company/employees
+e.g. POST http://localhost:5000/api/v1/units/5/company/employees
+Create a new employee and return that employee for the given company.
+If no company is listed, return a 404 and an appropriate message.
+If the unit ID provided does not match a unit, return a 404 and a different appropriate message.
+If the employee information is malformed in any way, return a 400 and an error message with as much detail as possible.
+ */
 
 module.exports = router
