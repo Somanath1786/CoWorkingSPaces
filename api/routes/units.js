@@ -288,5 +288,183 @@ If no company is listed, return a 404 and an appropriate message.
 If the unit ID provided does not match a unit, return a 404 and a different appropriate message.
 If the employee information is malformed in any way, return a 400 and an error message with as much detail as possible.
  */
+router.post('/:id/company/employees', async (req, res, next) => {
+  var status;
+  var unit = await Units.findById(req.params.id);
+  
+  if (unit == null)
+  {
+    status = 404
+    response = 'The requested unit cannot be found'    
+  }
+  else
+  {
+    if (unit.company == null)
+    {
+      status = 404;
+      response = 'There is no company listed for this unit'      
+    }
+    else
+    {
+      var employees = unit.company.employees;
+      employees.push(req.body);
+
+      try{
+        unit = await unit.save();
+        status = 200;
+        response = req.body;        
+      }
+      catch(error) {
+        console.error(error);
+        const err = new Error(error.name + ' : ' + error.message);
+        err.status = 400;
+        next(err); 
+      }
+    }
+  }
+
+  res.json({status, response})
+})
+
+/**
+ * PATCH /api/v1/units/[id]/company/employees/[id]
+e.g. PATCH http://localhost:5000/api/v1/units/5/company/employees/12
+Update an employee and return that employee for the given company.
+If no company is listed, return a 404 and an appropriate message.
+If the unit ID provided does not match a unit, return a 404 and a different appropriate message.
+If the employee information is malformed in any way, return a 400 and an error message with as much detail as possible.
+If no employee with that ID exists, return a different appropriate message.
+ */
+router.patch('/:unitId/company/employees/:employeeId', async (req, res, next) => {
+  var status = 200;
+  var unit = await Units.findById(req.params.unitId);
+  
+  if (unit == null)
+  {
+    status = 404
+    response = 'The requested unit cannot be found'    
+  }
+  else
+  {
+    if (unit.company == null)
+    {
+      status = 404;
+      response = 'There is no company listed for this unit'      
+    }
+    else
+    {
+      var employee;
+      for(var i = 0; i < unit.company.employees.length; i++)
+      {
+        if (unit.company.employees[i]._id.toString() === req.params.employeeId)
+        {
+          employee = unit.company.employees[i];
+          if (req.body.first_name)
+          {
+            employee.first_name = req.body.first_name
+          }
+          if (req.body.last_name)
+          {
+            employee.last_name = req.body.last_name
+          }
+          if (req.body.preferred_name)
+          {
+            employee.preferred_name = req.body.preferred_name
+          }
+          if (req.body.position)
+          {
+            employee.position = req.body.position
+          }
+          if (req.body.birthday)
+          {
+            employee.birthday = req.body.birthday
+          }
+          if (req.body.email)
+          {
+            employee.email = req.body.email
+          }         
+          
+          try{
+            unit = await unit.save();
+            status = 200;
+            response = employee;
+          }
+          catch(error) {
+            console.error(error);
+            const err = new Error(error.name + ' : ' + error.message);
+            err.status = 400;
+            next(err); 
+          }
+        }
+      }
+      
+      if (employee == undefined)
+      {
+        status = 404;
+        response = 'There is no employee with the requested id'
+      }     
+    }
+  }
+  res.json({status, response})
+})
+
+
+/**
+DELETE /api/v1/units/[id]/company/employees/[id]
+e.g. DELETE http://localhost:5000/api/v1/units/5/company/employees/12
+Destroy the employee document and return that employee's document for the given company.
+If no company is listed, return a 404 and an appropriate message.
+If the unit ID provided does not match a unit, return a 404 and a different appropriate message.
+If no employee with that ID exists, return a different appropriate message.
+ */
+router.delete('/:unitId/company/employees/:employeeId', async(req, res, next) => {
+  var status = 200;
+  var unit = await Units.findById(req.params.unitId);
+  
+  if (unit == null)
+  {
+    status = 404
+    response = 'The requested unit cannot be found'    
+  }
+  else
+  {
+    if (unit.company == null)
+    {
+      status = 404;
+      response = 'There is no company listed for this unit'      
+    }
+    else
+    {
+      var employee;
+      for(var i = 0; i < unit.company.employees.length; i++)
+      {
+        if (unit.company.employees[i]._id.toString() === req.params.employeeId)
+        {
+          employee = unit.company.employees[i];          
+          unit.company.employees.splice(i, 1);
+
+          try{
+            unit = await unit.save();
+            status = 200;
+            response = employee;
+          }
+          catch(error) {
+            console.error(error);
+            const err = new Error(error.name + ' : ' + error.message);
+            err.status = 400;
+            next(err); 
+          }
+        }
+      }
+      
+      if (employee == undefined)
+      {
+        status = 404;
+        response = 'There is no employee with the requested id'
+      }     
+    }
+  }
+  res.json({status, response}) 
+})
 
 module.exports = router
