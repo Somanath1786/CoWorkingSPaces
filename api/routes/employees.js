@@ -57,6 +57,30 @@ router.get('/', async (req, res, next) => {
             status = 200;
             response = matched_employees;
         }
+        if (key == 'birthday')
+        {
+            var matched_employees = []
+            results = await Units.find({}, {"company.employees" : 1, _id : 0})
+
+            for(var i = 0; i < results.length; i++)
+            {
+                employees = results[i].company.employees;                
+                for (var j = 0; j < employees.length; j++)
+                {
+                   employee_birthday = JSON.stringify(employees[j].birthday)
+                   employee_birthday = employee_birthday.replace(/"/g,"");
+                   console.log(employee_birthday, value);
+                   if (employee_birthday == value)
+                   {
+                        matched_employees.push(employees[j]);
+                   }
+                }
+            }
+
+            status = 200;
+            response = matched_employees;
+        }
+
       }
       else
       {
